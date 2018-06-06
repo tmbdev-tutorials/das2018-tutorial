@@ -14,7 +14,7 @@ sys.modules["layers"] = dltrainers.layers
 
 model_path = ["."]
 for d in "ocrobin ocroseg ocrorot ocroline".split():
-    for p in "/usr/local/share /usr/share".split():
+    for p in "/opt/conda/share /usr/local/share /usr/share".split():
         model_path += [p+"/"+d]
 model_path = ":".join(model_path)
 
