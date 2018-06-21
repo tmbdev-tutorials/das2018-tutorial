@@ -30,12 +30,39 @@ parser.add_argument("--skew", default="logskew-000015808-000132.pt")
 parser.add_argument("--segmenter", default="lowskew-000000259-011440.pt")
 parser.add_argument("--linerec", default="line2-000003330-004377.pt")
 parser.add_argument("--display", type=float, default=-1.0)
+parser.add_argument("--html", action="store_true")
 parser.add_argument("inputs", nargs="+")
 args = parser.parse_args()
+
+destination = sys.stdout
+
+def out(*args):
+    args = [str(x) for x in args]
+    destination.write(" ".join(args))
 
 def note(*args):
     args = [str(x) for x in args]
     sys.stderr.write("# " + " ".join(args) + "\n")
+
+def invert(image):
+    image = np.amax(image) - image
+    image /= np.amax(image)
+    return image
+
+def img2uri(image):
+    from StringIO import StringIO
+    import PIL
+    stream = StringIO()
+    try:
+        assert np.amax(image) <= 1.0
+        image = PIL.Image.fromarray(array(image*255, 'uint8'))
+        image.save(stream, format="PNG")
+        value = stream.getvalue()
+        data = value.encode("base64").replace("\n", "")
+        src = "data:image/png;base64,"+data
+        return src
+    finally:
+        stream.close()
 
 bm = rot = sk = seg = rec = None
 
@@ -70,6 +97,10 @@ for fname in args.inputs:
         image = bm.binarize(image)
         note("binarized")
         debug_display(image)
+    else:
+        image = invert(image)
+        note("not binarized")
+        debug_display(image)
 
     if rot is not None:
         angle = rot.rotation(image)
@@ -92,4 +123,9 @@ for fname in args.inputs:
         if rec is not None:
             for line in lines:
                 debug_display(line["image"])
-                print rec.recognize_line(line["image"])
+                result = rec.recognize_line(line["image"])
+                if args.html:
+                    out("<img src='{}'><br>\n".format(img2uri(line["image"])))
+                    out("{}<p>\n".format(result))
+                else:
+                    print result
